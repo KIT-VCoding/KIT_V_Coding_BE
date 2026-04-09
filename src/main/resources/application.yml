@@ -1,0 +1,97 @@
+spring:
+  main:
+    web-application-type: servlet
+  application:
+    name: thinkmap
+  config:
+    import: optional:file:.env[.properties]
+
+  # ── H2 인메모리 DB (개발·데모용) ──────────────────────────────
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
+
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:thinkmap;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+
+  # ── MySQL (운영 전환 시 아래 주석 해제, H2 설정 주석 처리) ──────
+  #datasource:
+  #  driver-class-name: com.mysql.cj.jdbc.Driver
+  #  url: ${LOCAL_DB_URL:jdbc:mysql://localhost:3306/thinkmap_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul}
+  #  username: ${LOCAL_DB_USERNAME:root}
+  #  password: ${LOCAL_DB_PASSWORD:password}
+
+  mvc:
+    async:
+      request-timeout: 150s  # 인사이트 생성(최대 120s) + 여유 30s
+
+  jpa:
+    defer-datasource-initialization: true  # Hibernate DDL 완료 후 data.sql 실행 보장
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: true
+
+  # ── MySQL 전환 시 아래 주석 해제 ─────────────────────────────
+  #jpa:
+  #  hibernate:
+  #    ddl-auto: update
+  #  properties:
+  #    hibernate:
+  #      format_sql: true
+  #      database-platform: org.hibernate.dialect.MySQLDialect
+  #  show-sql: false
+
+  sql:
+    init:
+      mode: embedded   # H2처럼 내장 DB에서만 SQL 스크립트 실행 (data.sql 없어도 경고 없음)
+
+  jackson:
+    time-zone: Asia/Seoul
+    serialization:
+      write-dates-as-timestamps: false   # LocalDateTime → ISO-8601 문자열 직렬화
+    deserialization:
+      fail-on-unknown-properties: false  # 프론트가 알 수 없는 필드 보내도 에러 없음
+    mapper:
+      accept-case-insensitive-enums: true  # "question" → QUESTION 자동 매핑
+
+server:
+  port: 8080
+
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:test-key}
+    base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+    # gemini-1.5-flash: 빠르고 무료 티어 지원. 인사이트 생성에도 충분한 품질.
+    # 더 높은 품질: gemini-1.5-pro / 최신 모델: gemini-2.0-flash-exp
+    model: ${GEMINI_MODEL:gemini-2.5-flash}
+
+# ── Swagger UI ─────────────────────────────────────────────────
+springdoc:
+  swagger-ui:
+    path: /swagger-ui
+    tags-sorter: alpha          # 태그 알파벳 순 정렬
+    operations-sorter: alpha    # 엔드포인트 알파벳 순 정렬
+  api-docs:
+    path: /v3/api-docs
+  use-management-port: false
+  packages-to-scan: com.example.thinkmap.controller
+
+# ── CORS 허용 오리진 (개발용) ──────────────────────────────────
+app:
+  cors:
+    origins: "http://localhost:8080,http://localhost:5173,http://localhost:3000"
+
+# ── 로깅 ──────────────────────────────────────────────────────
+logging:
+  level:
+    com.example.thinkmap: DEBUG
+    org.hibernate.SQL: DEBUG
