@@ -48,6 +48,10 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          # Default branch (main) writes cache; PRs/other branches are read-only by design.
+          # "Cache read-only" / "no match" on first runs is normal — not a build error.
+          add-job-summary: on-failure
 
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
