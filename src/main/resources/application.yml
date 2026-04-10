@@ -92,6 +92,14 @@ app:
 
 # ── 로깅 ──────────────────────────────────────────────────────
 logging:
+  file:
+    name: logs/thinkmap-app.log  # 로그 파일 경로 및 이름
+    logback:
+      rollingpolicy:
+        max-file-size: 10MB        # 한 파일당 최대 용량
+        max-history: 15            # 보관 기간 (일)
+        total-size-cap: 1GB        # 전체 로그 파일 합계 제한
+        file-name-pattern: ${LOG_FILE}-%d{yyyy-MM-dd}.%i.log
   level:
     com.example.thinkmap: DEBUG
     org.hibernate.SQL: DEBUG

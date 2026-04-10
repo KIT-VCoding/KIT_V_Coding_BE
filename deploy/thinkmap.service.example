@@ -1,0 +1,20 @@
+# Example systemd unit for EC2 (copy to /etc/systemd/system/thinkmap.service, then:
+#   sudo systemctl daemon-reload && sudo systemctl enable --now thinkmap
+#
+# Adjust User, WorkingDirectory, and EnvironmentFile to match your server.
+
+[Unit]
+Description=ThinkMap Spring Boot
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/thinkmap
+EnvironmentFile=-/opt/thinkmap/.env
+ExecStart=/usr/bin/java -jar /opt/thinkmap/thinkmap.jar
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
