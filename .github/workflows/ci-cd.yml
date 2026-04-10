@@ -1,0 +1,119 @@
+# ThinkMap Backend - CI/CD (GitHub Actions -> AWS EC2)
+#
+# CI: All PRs and pushes run Gradle test + bootJar build.
+# CD: On push to main only - copy JAR to EC2 over SSH and restart systemd.
+#
+# GitHub: Settings -> Secrets and variables -> Actions
+#   EC2_HOST    - Public IP or DNS (e.g. ec2-xx-xx.compute.amazonaws.com)
+#   EC2_USER    - SSH user (e.g. ubuntu, ec2-user)
+#   EC2_SSH_KEY - Full PEM private key for the instance
+#
+# EC2 setup example:
+#   - Deploy dir: /opt/thinkmap/thinkmap.jar (match REMOTE_* below)
+#   - systemd unit: thinkmap.service with ExecStart running that JAR
+#
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  JAVA_VERSION: "17"
+  GRADLE_OPTS: -Dorg.gradle.daemon=false
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew build --no-daemon
+
+      - name: Resolve boot JAR (exclude *-plain.jar)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          set -e
+          BOOT_JAR="$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-plain.jar' | head -n 1)"
+          if [ -z "$BOOT_JAR" ]; then
+            echo "No executable boot JAR found under build/libs"
+            exit 1
+          fi
+          cp "$BOOT_JAR" thinkmap-boot.jar
+          ls -la thinkmap-boot.jar
+
+      - name: Upload boot JAR artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: thinkmap-boot-jar
+          path: thinkmap-boot.jar
+          retention-days: 7
+
+  deploy-ec2:
+    name: Deploy to AWS EC2
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    env:
+      REMOTE_DIR: /opt/thinkmap
+      REMOTE_JAR: thinkmap.jar
+      SYSTEMD_SERVICE: thinkmap
+
+    steps:
+      - name: Download boot JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: thinkmap-boot-jar
+
+      - name: Copy JAR to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          source: thinkmap-boot.jar
+          target: ${{ env.REMOTE_DIR }}/
+
+      - name: Install JAR and restart service
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            set -e
+            sudo mkdir -p "${{ env.REMOTE_DIR }}"
+            sudo mv "${{ env.REMOTE_DIR }}/thinkmap-boot.jar" "${{ env.REMOTE_DIR }}/${{ env.REMOTE_JAR }}"
+            sudo chown root:root "${{ env.REMOTE_DIR }}/${{ env.REMOTE_JAR }}"
+            sudo systemctl restart ${{ env.SYSTEMD_SERVICE }}
+            sudo systemctl is-active --quiet ${{ env.SYSTEMD_SERVICE }}
