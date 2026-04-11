@@ -116,6 +116,7 @@ app:
   auth:
     token-secret: ${JWT_SECRET:thisIsAVeryLongSecretKeyForJwtTokenGenerationThatMustBeAtLeast256BitsLong!}
     token-expiration-msec: 86400000   # 24시간
+  frontend-url: "https://kit-vcoding.netlify.app"
   oauth2:
     authorized-redirect-uris:
       - http://localhost:3000/oauth2/redirect

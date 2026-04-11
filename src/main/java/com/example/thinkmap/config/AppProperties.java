@@ -13,6 +13,7 @@ import java.util.List;
 @Setter
 public class AppProperties {
 
+    private String frontendUrl;
     private final Auth auth = new Auth();
     private final OAuth2 oauth2 = new OAuth2();
 
