@@ -12,6 +12,7 @@ public class OAuth2UserInfoFactory {
         return switch (provider) {
             case GOOGLE -> new GoogleOAuth2UserInfo(attributes);
             case KAKAO  -> new KakaoOAuth2UserInfo(attributes);
+            case LOCAL  -> throw new IllegalArgumentException("자체 로그인은 OAuth2를 사용하지 않습니다.");
         };
     }
 }

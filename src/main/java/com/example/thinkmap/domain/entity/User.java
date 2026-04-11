@@ -26,6 +26,8 @@ public class User {
     @Column(nullable = false)
     private String email;
 
+    private String password;
+
     private String profileImageUrl;
 
     @Enumerated(EnumType.STRING)
@@ -43,10 +45,11 @@ public class User {
     private LocalDateTime updatedAt;
 
     @Builder
-    public User(String name, String email, String profileImageUrl,
+    public User(String name, String email, String password, String profileImageUrl,
                 AuthProvider provider, String providerId) {
         this.name = name;
         this.email = email;
+        this.password = password;
         this.profileImageUrl = profileImageUrl;
         this.provider = provider;
         this.providerId = providerId;
