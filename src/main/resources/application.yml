@@ -63,6 +63,30 @@ spring:
     mapper:
       accept-case-insensitive-enums: true  # "question" → QUESTION 자동 매핑
 
+  # ── OAuth2 소셜 로그인 ────────────────────────────────────────
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope: profile, email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID}
+            client-secret: ${KAKAO_CLIENT_SECRET}
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/kakao"
+            scope: profile_nickname, account_email, profile_image
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
 server:
   port: 8080
 
@@ -88,7 +112,16 @@ springdoc:
 # ── CORS 허용 오리진 (개발용) ──────────────────────────────────
 app:
   cors:
-    origins: "http://localhost:8080,http://localhost:5173,http://localhost:3000"
+    origins: "http://localhost:8080,http://localhost:5173,http://localhost:3000,http://ec2-13-124-2-12.ap-northeast-2.compute.amazonaws.com:3000,http://ec2-13-124-2-12.ap-northeast-2.compute.amazonaws.com:5173,http://ec2-13-124-2-12.ap-northeast-2.compute.amazonaws.com:8080"
+  auth:
+    token-secret: ${JWT_SECRET:thisIsAVeryLongSecretKeyForJwtTokenGenerationThatMustBeAtLeast256BitsLong!}
+    token-expiration-msec: 86400000   # 24시간
+  oauth2:
+    authorized-redirect-uris:
+      - http://localhost:3000/oauth2/redirect
+      - http://localhost:5173/oauth2/redirect
+      - http://ec2-13-124-2-12.ap-northeast-2.compute.amazonaws.com:3000/oauth2/redirect
+      - http://ec2-13-124-2-12.ap-northeast-2.compute.amazonaws.com:5173/oauth2/redirect
 
 # ── 로깅 ──────────────────────────────────────────────────────
 logging:
