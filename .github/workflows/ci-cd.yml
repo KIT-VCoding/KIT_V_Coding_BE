@@ -4,13 +4,21 @@
 # CD: On push to main only - copy JAR to EC2 over SSH and restart systemd.
 #
 # GitHub: Settings -> Secrets and variables -> Actions
-#   EC2_HOST    - Public IP or DNS (e.g. ec2-xx-xx.compute.amazonaws.com)
-#   EC2_USER    - SSH user (e.g. ubuntu, ec2-user)
-#   EC2_SSH_KEY - Full PEM private key for the instance
+#   EC2_HOST         - Public IP or DNS (e.g. ec2-xx-xx.compute.amazonaws.com)
+#   EC2_USER         - SSH user (e.g. ubuntu, ec2-user)
+#   EC2_SSH_KEY      - Full PEM private key for the instance
+#   GEMINI_API_KEY   - Real Gemini key for CI (same as local .env); required for Gradle
+#
+# CI has no repo .env (gitignored). The "Build with Gradle" step sets env vars so
+# Spring Boot can load application.yml during tests. Google OAuth is unused — dummies
+# only. Kakao uses CI placeholders below. GEMINI_API_KEY comes from Actions secrets
+# (not the application.yml test-key default). EC2 must still get KAKAO_*, GEMINI_API_KEY,
+# JWT_SECRET (and optional Google) from the server .env or systemd EnvironmentFile=.
 #
 # EC2 setup example:
 #   - Deploy dir: /opt/thinkmap/thinkmap.jar (match REMOTE_* below)
 #   - systemd unit: thinkmap.service with ExecStart running that JAR
+#   - EnvironmentFile=-/opt/thinkmap/.env   (or equivalent) for production secrets
 #
 name: CI/CD
 
@@ -57,6 +65,12 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build with Gradle
+        env:
+          GOOGLE_CLIENT_ID: dummy
+          GOOGLE_CLIENT_SECRET: dummy
+          KAKAO_CLIENT_ID: ci-dummy-kakao-client-id
+          KAKAO_CLIENT_SECRET: ci-dummy-kakao-secret
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: ./gradlew build --no-daemon
 
       - name: Resolve boot JAR (exclude *-plain.jar)
