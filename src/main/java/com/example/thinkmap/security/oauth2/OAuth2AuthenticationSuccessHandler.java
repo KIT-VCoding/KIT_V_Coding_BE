@@ -41,7 +41,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                 HttpCookieOAuth2AuthorizationRequestRepository.REDIRECT_URI_PARAM_COOKIE_NAME);
 
         String targetUrl = redirectUri.filter(this::isAuthorizedRedirectUri)
-                .orElse(getDefaultTargetUrl());
+                .orElse(appProperties.getFrontendUrl() + "/oauth2/redirect");
 
         String token = tokenProvider.createToken(authentication);
 
