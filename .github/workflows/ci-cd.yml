@@ -14,6 +14,7 @@
 # CI has no repo .env (gitignored). The "Build with Gradle" step passes Google dummies
 # plus KAKAO_* and GEMINI_API_KEY from Actions secrets. EC2 still needs the same keys
 # (and JWT_SECRET, optional Google) from server .env or systemd EnvironmentFile=.
+# Swagger UI "Servers" over HTTPS: add API_PUBLIC_URL=https://thinkmap-api.shop to that .env.
 #
 # EC2 setup example:
 #   - Deploy dir: /opt/thinkmap/thinkmap.jar (match REMOTE_* below)

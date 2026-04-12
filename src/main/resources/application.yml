@@ -120,6 +120,9 @@ app:
     token-secret: ${JWT_SECRET:thisIsAVeryLongSecretKeyForJwtTokenGenerationThatMustBeAtLeast256BitsLong!}
     token-expiration-msec: 86400000 # 24시간
   frontend-url: 'https://kit-vcoding.netlify.app'
+  # Swagger UI "Servers" / Try it out 기본 URL. Cloudflare·Nginx HTTPS 배포 시 https://도메인 권장.
+  # 비우면 SpringDoc이 요청 URL에서 추론(프록시 뒤에서는 http로 잘못 잡힐 수 있음).
+  api-public-url: ${API_PUBLIC_URL:}
   oauth2:
     authorized-redirect-uris:
       - http://localhost:3000/oauth2/redirect
