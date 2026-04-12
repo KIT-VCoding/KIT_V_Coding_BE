@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -44,8 +43,35 @@ public class GeminiClient {
      * @return Map with keys "summary" and "answer". 파싱 실패 시 "answer" = raw 텍스트로 폴백.
      */
     public Map<String, String> generateStructuredContent(String prompt) {
-        String raw = callApi(GeminiRequest.ofStructured(prompt));
+        String raw = generateStructuredRaw(prompt);
         return parseStructuredResponse(raw);
+    }
+
+    /**
+     * temperature·토큰 한도는 구조화용({@link GeminiRequest#ofStructured})과 동일하게 호출하고,
+     * 파싱 없이 모델 원문만 반환한다. (포트폴리오 등 커스텀 JSON 스키마용)
+     */
+    public String generateStructuredRaw(String prompt) {
+        return callApi(GeminiRequest.ofStructured(prompt));
+    }
+
+    /**
+     * 모델 응답에서 첫 번째 JSON 객체 {@code {...}} 구간만 추출한다.
+     * 코드블록·앞뒤 설명 텍스트가 있어도 제거한다.
+     *
+     * @return JSON 객체 문자열, 없으면 {@code null}
+     */
+    public String extractJsonObject(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String cleaned = raw.replaceAll("(?s)```json\\s*", "").replaceAll("```", "").strip();
+        int start = cleaned.indexOf('{');
+        int end = cleaned.lastIndexOf('}');
+        if (start >= 0 && end > start) {
+            return cleaned.substring(start, end + 1);
+        }
+        return null;
     }
 
     // ──────────────────────────────────────────────
@@ -113,15 +139,8 @@ public class GeminiClient {
 
     private Map<String, String> parseStructuredResponse(String raw) {
         try {
-            // Gemini가 ```json ... ``` 코드블록으로 감쌀 수 있으므로 제거
-            String cleaned = raw.replaceAll("(?s)```json\\s*", "").replaceAll("```", "").strip();
-
-            // 첫 번째 '{' ~ 마지막 '}' 사이만 추출 (앞뒤 불필요한 텍스트 제거)
-            int start = cleaned.indexOf('{');
-            int end   = cleaned.lastIndexOf('}');
-            if (start >= 0 && end > start) {
-                cleaned = cleaned.substring(start, end + 1);
-            } else {
+            String cleaned = extractJsonObject(raw);
+            if (cleaned == null) {
                 log.warn("[GeminiClient] JSON 블록을 찾을 수 없음 - raw 텍스트로 폴백");
                 return Map.of("summary", "", "answer", raw);
             }
