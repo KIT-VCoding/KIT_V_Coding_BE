@@ -6,8 +6,12 @@ import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
 
 @Configuration
 public class OpenApiConfig {
@@ -15,8 +19,8 @@ public class OpenApiConfig {
     private static final String BEARER_SCHEME = "BearerAuth";
 
     @Bean
-    public OpenAPI openAPI() {
-        return new OpenAPI()
+    public OpenAPI openAPI(@Value("${app.api-public-url:}") String apiPublicUrl) {
+        OpenAPI api = new OpenAPI()
                 .info(new Info()
                         .title("ThinkMap API")
                         .description("""
@@ -60,5 +64,15 @@ public class OpenApiConfig {
                 )
                 // 전역 보안 요구사항 — 모든 엔드포인트에 자물쇠 아이콘 표시
                 .addSecurityItem(new SecurityRequirement().addList(BEARER_SCHEME));
+
+        String base = apiPublicUrl == null ? "" : apiPublicUrl.strip();
+        if (!base.isEmpty()) {
+            if (base.endsWith("/")) {
+                base = base.substring(0, base.length() - 1);
+            }
+            // 리버스 프록시 뒤에서도 Swagger Try-it-out이 https 공개 URL로 나가도록 고정
+            api.setServers(List.of(new Server().url(base).description("Public API (HTTPS)")));
+        }
+        return api;
     }
 }
