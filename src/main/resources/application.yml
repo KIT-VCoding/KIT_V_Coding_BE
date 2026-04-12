@@ -115,16 +115,17 @@ springdoc:
 # ── CORS 허용 오리진 (개발용) ──────────────────────────────────
 app:
   cors:
-    origins: "http://localhost:8080,http://localhost:5173,http://localhost:3000,https://kit-vcoding.netlify.app,https://thinkmap-api.shop"
+    origins: 'http://localhost:8080,http://localhost:5173,http://localhost:3000,https://kit-vcoding.netlify.app,https://thinkmap-api.shop'
   auth:
     token-secret: ${JWT_SECRET:thisIsAVeryLongSecretKeyForJwtTokenGenerationThatMustBeAtLeast256BitsLong!}
     token-expiration-msec: 86400000 # 24시간
-  frontend-url: "https://kit-vcoding.netlify.app"
+  frontend-url: 'https://kit-vcoding.netlify.app'
   oauth2:
     authorized-redirect-uris:
       - http://localhost:3000/oauth2/redirect
       - http://localhost:5173/oauth2/redirect
       - https://kit-vcoding.netlify.app/oauth2/redirect
+      - https://thinkmap-api.shop/oauth2/redirect
 
 # ── 로깅 ──────────────────────────────────────────────────────
 logging:

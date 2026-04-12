@@ -323,7 +323,7 @@ CREATE DATABASE thinkmap_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```yaml
 app:
   cors:
-    origins: "http://localhost:5173,https://your-frontend-domain.com"
+    origins: "http://localhost:5173,https://kit-vcoding.netlify.app,https://thinkmap-api.shop"
 ```
 
 ---
