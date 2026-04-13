@@ -131,28 +131,30 @@ public class ThoughtService {
         String prompt = buildAnswerPrompt(sessionId, savedQuestion, resolvedType);
         Map<String, String> structured = callGeminiSafely(prompt);
 
-        ThoughtNodeResponse answerResponse = null;
-        if (structured != null) {
-            ThoughtNode savedAnswer = nodeRepository.save(
-                    ThoughtNode.builder()
-                            .session(session)
-                            .parentNode(savedQuestion)
-                            .nodeType(NodeType.AI_ANSWER)
-                            .content(structured.getOrDefault("answer", ""))
-                            .summary(blankToNull(structured.getOrDefault("summary", "")))
-                            .build()
-            );
-            log.info("[ThoughtService] AI 답변 노드 저장 완료 - nodeId: {}", savedAnswer.getId());
-            answerResponse = ThoughtNodeResponse.from(savedAnswer);
+        if (structured == null) {
+            session.touch();
+            sessionRepository.save(session);
+            return AskResponse.ofAiError(ThoughtNodeResponse.from(savedQuestion));
         }
+
+        ThoughtNode savedAnswer = nodeRepository.save(
+                ThoughtNode.builder()
+                        .session(session)
+                        .parentNode(savedQuestion)
+                        .nodeType(NodeType.AI_ANSWER)
+                        .content(structured.getOrDefault("answer", ""))
+                        .summary(blankToNull(structured.getOrDefault("summary", "")))
+                        .build()
+        );
+        log.info("[ThoughtService] AI 답변 노드 저장 완료 - nodeId: {}", savedAnswer.getId());
 
         // 세션 최신 활동 시각 갱신
         session.touch();
         sessionRepository.save(session);
 
-        return new AskResponse(
+        return AskResponse.of(
                 ThoughtNodeResponse.from(savedQuestion),
-                answerResponse
+                ThoughtNodeResponse.from(savedAnswer)
         );
     }
 
