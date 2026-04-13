@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,14 +36,18 @@ public class PortfolioReportService {
     private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
-    public PortfolioReportResponse generateReport(long sessionId, PortfolioReportRequest request) {
+    public PortfolioReportResponse generateReport(long sessionId, PortfolioReportRequest request, Long userId) {
         PortfolioReportRequest body = request != null ? request : PortfolioReportRequest.empty();
-        if (body.hasAnalysisOverride()) {
-            return objectMapper.convertValue(body.analysisJson(), PortfolioReportResponse.class);
-        }
 
         LearningSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("세션을 찾을 수 없습니다. id=" + sessionId));
+        if (!session.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("해당 세션에 접근 권한이 없습니다.");
+        }
+
+        if (body.hasAnalysisOverride()) {
+            return objectMapper.convertValue(body.analysisJson(), PortfolioReportResponse.class);
+        }
 
         List<ThoughtNode> nodes = nodeRepository.findBySessionIdOrderByCreatedAtAsc(sessionId);
         long questionCount = nodes.stream()

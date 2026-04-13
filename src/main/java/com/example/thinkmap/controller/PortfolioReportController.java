@@ -2,6 +2,7 @@ package com.example.thinkmap.controller;
 
 import com.example.thinkmap.dto.PortfolioReportRequest;
 import com.example.thinkmap.dto.PortfolioReportResponse;
+import com.example.thinkmap.security.UserPrincipal;
 import com.example.thinkmap.service.PortfolioReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "학습 포트폴리오", description = "세션 로그 기반 AI 포트폴리오 보고서 생성")
@@ -39,7 +41,8 @@ public class PortfolioReportController {
     @PostMapping("/{sessionId}/portfolio-report")
     public ResponseEntity<PortfolioReportResponse> generatePortfolioReport(
             @Parameter(description = "학습 세션 ID") @PathVariable Long sessionId,
-            @RequestBody(required = false) PortfolioReportRequest request) {
-        return ResponseEntity.ok(portfolioReportService.generateReport(sessionId, request));
+            @RequestBody(required = false) PortfolioReportRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(portfolioReportService.generateReport(sessionId, request, principal.getId()));
     }
 }

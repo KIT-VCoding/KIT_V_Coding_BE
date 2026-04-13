@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 @Schema(description = "학습 세션 응답")
 public record SessionResponse(
         @Schema(description = "세션 고유 ID") Long id,
+        @Schema(description = "소유자 사용자 ID") Long userId,
         @Schema(description = "세션 제목") String title,
         @Schema(description = "세션 생성 일시") LocalDateTime createdAt,
         @Schema(description = "마지막 활동 일시") LocalDateTime updatedAt,
@@ -24,6 +25,7 @@ public record SessionResponse(
                 .anyMatch(n -> n.getNodeType() == NodeType.INSIGHT);
         return new SessionResponse(
                 session.getId(),
+                session.getUser().getId(),
                 session.getTitle(),
                 session.getCreatedAt(),
                 session.getUpdatedAt(),

@@ -4,6 +4,7 @@ import com.example.thinkmap.dto.AddQuestionRequest;
 import com.example.thinkmap.dto.AskResponse;
 import com.example.thinkmap.dto.InsightResponse;
 import com.example.thinkmap.dto.ThoughtTreeNode;
+import com.example.thinkmap.security.UserPrincipal;
 import com.example.thinkmap.service.ThoughtService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -14,6 +15,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -44,9 +46,10 @@ public class ThoughtController {
     @PostMapping
     public ResponseEntity<AskResponse> addQuestion(
             @Parameter(description = "학습 세션 ID") @PathVariable Long sessionId,
-            @Valid @RequestBody AddQuestionRequest request) {
+            @Valid @RequestBody AddQuestionRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(thoughtService.addQuestionAndGetAnswer(sessionId, request));
+                .body(thoughtService.addQuestionAndGetAnswer(sessionId, request, principal.getId()));
     }
 
     @Operation(
@@ -66,9 +69,10 @@ public class ThoughtController {
     })
     @PostMapping("/insight")
     public ResponseEntity<InsightResponse> createInsight(
-            @Parameter(description = "학습 세션 ID") @PathVariable Long sessionId) {
+            @Parameter(description = "학습 세션 ID") @PathVariable Long sessionId,
+            @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(thoughtService.createInsight(sessionId));
+                .body(thoughtService.createInsight(sessionId, principal.getId()));
     }
 
     @Operation(
@@ -87,7 +91,8 @@ public class ThoughtController {
     })
     @GetMapping("/tree")
     public ResponseEntity<List<ThoughtTreeNode>> getTree(
-            @Parameter(description = "학습 세션 ID") @PathVariable Long sessionId) {
-        return ResponseEntity.ok(thoughtService.getTree(sessionId));
+            @Parameter(description = "학습 세션 ID") @PathVariable Long sessionId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(thoughtService.getTree(sessionId, principal.getId()));
     }
 }
