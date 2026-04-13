@@ -57,14 +57,6 @@ GEMINI_MODEL=gemini-2.5-flash
 # JWT (필수 — 256비트 이상 랜덤 문자열 권장)
 JWT_SECRET=thisIsAVeryLongSecretKeyForJwtTokenGenerationThatMustBeAtLeast256BitsLong!
 
-# OAuth2 — Google
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-
-# OAuth2 — Kakao
-KAKAO_CLIENT_ID=your_kakao_client_id
-KAKAO_CLIENT_SECRET=your_kakao_client_secret
-
 # MySQL (운영 전환 시 사용 — 개발 환경에서는 H2 자동 사용)
 LOCAL_DB_URL=jdbc:mysql://localhost:3306/thinkmap_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
 LOCAL_DB_USERNAME=root
@@ -104,10 +96,6 @@ Authorization: Bearer {accessToken}
 |---|---|---|
 | 자체 회원가입 | `POST /api/auth/signup` | 이메일·비밀번호 회원가입 |
 | 자체 로그인 | `POST /api/auth/login` | 이메일·비밀번호 로그인 |
-| Google OAuth2 | `GET /oauth2/authorization/google` | Google 로그인 리다이렉트 |
-| Kakao OAuth2 | `GET /api/auth/kakao/url` → `GET /oauth2/authorization/kakao` | 카카오 로그인 URL 조회 |
-
-OAuth2 로그인 성공 시 프론트 URL로 리다이렉트되며 `?token={jwt}` 쿼리 파라미터로 토큰이 전달됩니다.
 
 ---
 
@@ -121,7 +109,6 @@ OAuth2 로그인 성공 시 프론트 URL로 리다이렉트되며 `?token={jwt}
 |---|---|---|---|
 | `POST` | `/api/auth/signup` | 불필요 | 자체 회원가입 |
 | `POST` | `/api/auth/login` | 불필요 | 자체 로그인 |
-| `GET` | `/api/auth/kakao/url` | 불필요 | 카카오 로그인 URL 조회 |
 | `GET` | `/api/auth/me` | 필요 | 현재 로그인 사용자 정보 조회 |
 
 #### 로그인 예시
