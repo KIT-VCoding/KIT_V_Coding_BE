@@ -26,8 +26,8 @@ ThinkMap은 단순한 AI 답변 서비스가 아닙니다.
 | Framework | Spring Boot 3.5.5 |
 | Security | Spring Security 6, JWT, OAuth2 (Google·Kakao) |
 | ORM | Spring Data JPA (Hibernate) |
-| DB (개발) | H2 In-Memory |
-| DB (운영) | MySQL 8 |
+| DB | H2 In-Memory |
+| 배포 | AWS EC2 |
 | AI | Google Gemini API (`gemini-2.5-flash`) |
 | HTTP Client | Spring WebFlux WebClient (Reactor Netty) |
 | API 문서 | SpringDoc OpenAPI 3 (Swagger UI) |
@@ -369,13 +369,9 @@ src/main/java/com/example/thinkmap/
 
 ---
 
-## 운영 환경 전환 (H2 → MySQL)
+## 배포
 
-`application.yml`에서 H2 설정을 주석 처리하고 MySQL 설정을 활성화하세요.
-
-```sql
-CREATE DATABASE thinkmap_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
+AWS EC2에서 H2 In-Memory DB로 운영됩니다.
 
 ---
 
