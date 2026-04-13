@@ -218,6 +218,9 @@ public class ThoughtService {
         List<ThoughtNode> rootNodes = new ArrayList<>();
 
         for (ThoughtNode node : allNodes) {
+            if (node.getNodeType() == NodeType.INSIGHT) {
+                continue; // 학습 회고는 마인드맵 트리에서 제외
+            }
             if (node.getParentNode() == null) {
                 rootNodes.add(node);
             } else {
