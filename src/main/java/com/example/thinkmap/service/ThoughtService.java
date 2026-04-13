@@ -129,18 +129,22 @@ public class ThoughtService {
 
         // AI 답변 생성 — 실패해도 질문 노드는 롤백되지 않음 (try-catch로 트랜잭션 유지)
         String prompt = buildAnswerPrompt(sessionId, savedQuestion, resolvedType);
-        Map<String, String> structured = callGeminiSafely(prompt, "AI 답변을 일시적으로 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        Map<String, String> structured = callGeminiSafely(prompt);
 
-        ThoughtNode savedAnswer = nodeRepository.save(
-                ThoughtNode.builder()
-                        .session(session)
-                        .parentNode(savedQuestion)
-                        .nodeType(NodeType.AI_ANSWER)
-                        .content(structured.getOrDefault("answer", ""))
-                        .summary(blankToNull(structured.getOrDefault("summary", "")))
-                        .build()
-        );
-        log.info("[ThoughtService] AI 답변 노드 저장 완료 - nodeId: {}", savedAnswer.getId());
+        ThoughtNodeResponse answerResponse = null;
+        if (structured != null) {
+            ThoughtNode savedAnswer = nodeRepository.save(
+                    ThoughtNode.builder()
+                            .session(session)
+                            .parentNode(savedQuestion)
+                            .nodeType(NodeType.AI_ANSWER)
+                            .content(structured.getOrDefault("answer", ""))
+                            .summary(blankToNull(structured.getOrDefault("summary", "")))
+                            .build()
+            );
+            log.info("[ThoughtService] AI 답변 노드 저장 완료 - nodeId: {}", savedAnswer.getId());
+            answerResponse = ThoughtNodeResponse.from(savedAnswer);
+        }
 
         // 세션 최신 활동 시각 갱신
         session.touch();
@@ -148,7 +152,7 @@ public class ThoughtService {
 
         return new AskResponse(
                 ThoughtNodeResponse.from(savedQuestion),
-                ThoughtNodeResponse.from(savedAnswer)
+                answerResponse
         );
     }
 
@@ -214,6 +218,9 @@ public class ThoughtService {
         List<ThoughtNode> rootNodes = new ArrayList<>();
 
         for (ThoughtNode node : allNodes) {
+            if (node.getNodeType() == NodeType.INSIGHT) {
+                continue; // 학습 회고는 마인드맵 트리에서 제외
+            }
             if (node.getParentNode() == null) {
                 rootNodes.add(node);
             } else {
@@ -402,15 +409,15 @@ public class ThoughtService {
     }
 
     /**
-     * Gemini API 호출. 실패 시 예외 대신 fallbackMessage를 answer로 하는 Map 반환.
-     * Q&A 흐름에서 질문 노드가 롤백되지 않도록 트랜잭션을 유지한다.
+     * Gemini API 호출. 실패 시 null 반환 (질문 노드 롤백 방지).
+     * null이면 AI_ANSWER 노드를 저장하지 않음.
      */
-    private Map<String, String> callGeminiSafely(String prompt, String fallbackMessage) {
+    private Map<String, String> callGeminiSafely(String prompt) {
         try {
             return geminiClient.generateStructuredContent(prompt);
         } catch (Exception e) {
-            log.error("[ThoughtService] Gemini 호출 실패 - 폴백 적용. 원인: {}", e.getMessage());
-            return Map.of("summary", "AI 응답 실패", "answer", fallbackMessage);
+            log.error("[ThoughtService] Gemini 호출 실패. 원인: {}", e.getMessage());
+            return null;
         }
     }
 
