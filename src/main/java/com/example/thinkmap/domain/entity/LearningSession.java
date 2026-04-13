@@ -14,7 +14,8 @@ import java.util.List;
 
 @Entity
 @Table(name = "learning_session", indexes = {
-        @Index(name = "idx_learning_session_updated_at", columnList = "updated_at")
+        @Index(name = "idx_learning_session_updated_at", columnList = "updated_at"),
+        @Index(name = "idx_learning_session_user_id", columnList = "user_id")
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -23,6 +24,10 @@ public class LearningSession {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(nullable = false, length = 255)
     private String title;
@@ -39,7 +44,8 @@ public class LearningSession {
     private List<ThoughtNode> nodes = new ArrayList<>();
 
     @Builder
-    public LearningSession(String title) {
+    public LearningSession(User user, String title) {
+        this.user = user;
         this.title = title;
     }
 

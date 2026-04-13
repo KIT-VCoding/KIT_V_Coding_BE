@@ -4,12 +4,15 @@ import com.example.thinkmap.client.GeminiClient;
 import com.example.thinkmap.domain.entity.LearningSession;
 import com.example.thinkmap.domain.entity.NodeType;
 import com.example.thinkmap.domain.entity.ThoughtNode;
+import com.example.thinkmap.domain.entity.User;
 import com.example.thinkmap.domain.repository.LearningSessionRepository;
 import com.example.thinkmap.domain.repository.ThoughtNodeRepository;
+import com.example.thinkmap.domain.repository.UserRepository;
 import com.example.thinkmap.dto.*;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +26,7 @@ public class ThoughtService {
 
     private final LearningSessionRepository sessionRepository;
     private final ThoughtNodeRepository nodeRepository;
+    private final UserRepository userRepository;
     private final GeminiClient geminiClient;
 
     // ──────────────────────────────────────────────
@@ -30,12 +34,15 @@ public class ThoughtService {
     // ──────────────────────────────────────────────
 
     @Transactional
-    public SessionResponse createSession(CreateSessionRequest request) {
+    public SessionResponse createSession(CreateSessionRequest request, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다. id=" + userId));
         LearningSession session = LearningSession.builder()
+                .user(user)
                 .title(request.title())
                 .build();
         LearningSession saved = sessionRepository.save(session);
-        log.info("[ThoughtService] 세션 생성 완료 - id: {}, title: {}", saved.getId(), saved.getTitle());
+        log.info("[ThoughtService] 세션 생성 완료 - id: {}, title: {}, userId: {}", saved.getId(), saved.getTitle(), userId);
         return SessionResponse.from(saved);
     }
 
@@ -44,8 +51,8 @@ public class ThoughtService {
     // ──────────────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public List<SessionResponse> listSessions() {
-        return sessionRepository.findAllWithNodesOrderByUpdatedAtDesc()
+    public List<SessionResponse> listSessions(Long userId) {
+        return sessionRepository.findAllByUserIdWithNodesOrderByUpdatedAtDesc(userId)
                 .stream()
                 .map(SessionResponse::from)
                 .collect(Collectors.toList());
@@ -56,9 +63,10 @@ public class ThoughtService {
     // ──────────────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public SessionResponse getSession(Long sessionId) {
+    public SessionResponse getSession(Long sessionId, Long userId) {
         LearningSession session = sessionRepository.findByIdWithNodes(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("세션을 찾을 수 없습니다. id=" + sessionId));
+        verifyOwnership(session, userId);
         return SessionResponse.from(session);
     }
 
@@ -67,9 +75,10 @@ public class ThoughtService {
     // ──────────────────────────────────────────────
 
     @Transactional
-    public SessionResponse updateSessionTitle(Long sessionId, UpdateSessionTitleRequest request) {
+    public SessionResponse updateSessionTitle(Long sessionId, UpdateSessionTitleRequest request, Long userId) {
         LearningSession session = sessionRepository.findByIdWithNodes(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("세션을 찾을 수 없습니다. id=" + sessionId));
+        verifyOwnership(session, userId);
         session.updateTitle(request.title());
         // @UpdateTimestamp가 merge 시 updated_at을 자동 갱신
         sessionRepository.save(session);
@@ -82,10 +91,10 @@ public class ThoughtService {
     // ──────────────────────────────────────────────
 
     @Transactional
-    public void deleteSession(Long sessionId) {
-        // findById로 존재 확인 후 삭제 (existsById + deleteById TOCTOU 패턴 제거)
+    public void deleteSession(Long sessionId, Long userId) {
         LearningSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("세션을 찾을 수 없습니다. id=" + sessionId));
+        verifyOwnership(session, userId);
         sessionRepository.delete(session);  // CascadeType.ALL로 연관 노드도 삭제
         log.info("[ThoughtService] 세션 삭제 완료 - id: {}", sessionId);
     }
@@ -95,12 +104,13 @@ public class ThoughtService {
     // ──────────────────────────────────────────────
 
     @Transactional
-    public AskResponse addQuestionAndGetAnswer(Long sessionId, AddQuestionRequest request) {
+    public AskResponse addQuestionAndGetAnswer(Long sessionId, AddQuestionRequest request, Long userId) {
         // 비즈니스 레벨 검증: AI_ANSWER·INSIGHT는 클라이언트가 직접 지정 불가
         request.validateNodeType();
 
         LearningSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("세션을 찾을 수 없습니다. id=" + sessionId));
+        verifyOwnership(session, userId);
 
         ThoughtNode parentNode = resolveParentNode(request.parentNodeId(), sessionId);
         NodeType resolvedType  = request.resolvedNodeType();
@@ -147,9 +157,10 @@ public class ThoughtService {
     // ──────────────────────────────────────────────
 
     @Transactional
-    public InsightResponse createInsight(Long sessionId) {
+    public InsightResponse createInsight(Long sessionId, Long userId) {
         LearningSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("세션을 찾을 수 없습니다. id=" + sessionId));
+        verifyOwnership(session, userId);
 
         List<ThoughtNode> allNodes = nodeRepository.findBySessionIdOrderByCreatedAtAsc(sessionId);
 
@@ -188,10 +199,10 @@ public class ThoughtService {
     // ──────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public List<ThoughtTreeNode> getTree(Long sessionId) {
-        if (!sessionRepository.existsById(sessionId)) {
-            throw new EntityNotFoundException("세션을 찾을 수 없습니다. id=" + sessionId);
-        }
+    public List<ThoughtTreeNode> getTree(Long sessionId, Long userId) {
+        LearningSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new EntityNotFoundException("세션을 찾을 수 없습니다. id=" + sessionId));
+        verifyOwnership(session, userId);
 
         List<ThoughtNode> allNodes = nodeRepository.findAllWithChildrenBySessionId(sessionId);
         if (allNodes.isEmpty()) {
@@ -369,6 +380,13 @@ public class ThoughtService {
     // ──────────────────────────────────────────────
     // 유틸
     // ──────────────────────────────────────────────
+
+    /** 세션 소유자와 요청 사용자가 일치하는지 검증 */
+    private void verifyOwnership(LearningSession session, Long userId) {
+        if (!session.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("해당 세션에 접근 권한이 없습니다.");
+        }
+    }
 
     /** parentNodeId가 있으면 노드를 조회하고 세션 소속 검증, null이면 null 반환 */
     private ThoughtNode resolveParentNode(Long parentNodeId, Long sessionId) {

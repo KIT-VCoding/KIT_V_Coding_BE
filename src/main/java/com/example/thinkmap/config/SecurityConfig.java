@@ -57,7 +57,7 @@ public class SecurityConfig {
             .httpBasic(AbstractHttpConfigurer::disable)
             // H2 콘솔용 frameOptions 허용
             .headers(h -> h.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
-            // 권한 설정 — 기존 API 엔드포인트는 모두 허용 유지
+            // 권한 설정
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/oauth2/**",
@@ -68,7 +68,7 @@ public class SecurityConfig {
                     "/swagger-ui.html",
                     "/v3/api-docs/**"
                 ).permitAll()
-                .anyRequest().permitAll()   // 기존 /api/** 엔드포인트 유지
+                .anyRequest().authenticated()
             )
             // OAuth2 소셜 로그인
             .oauth2Login(oauth2 -> oauth2
